@@ -1,16 +1,24 @@
 'use client';
-import { SignOutButton, SignedIn, SignedOut } from "@clerk/clerk-react";
+import { SignOutButton, SignedIn, SignedOut, useOrganization, useUser } from "@clerk/nextjs";
 import { SignIn, SignInButton, useSession } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button"
-import Image from "next/image";
-import { useMutation, useQueries, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 export default function Home() {
   // const session = useSession();
-  const createFile = useMutation(api.files.createFile)
-  const file = useQuery(api.files.getFiles)
+  const organization = useOrganization();
+  const user = useUser();
 
+  let orgId: string| undefined = undefined;
+  if(organization.isLoaded && user.isLoaded){
+    orgId = organization.organization?.id ?? user.user?.id
+  }
+  
+  const createFile = useMutation(api.files.createFile)
+  const file = useQuery(api.files.getFiles,orgId ?{orgId:orgId}:'skip')
+
+  console.log(file)
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <SignedIn>
@@ -28,10 +36,11 @@ export default function Home() {
           return (<div key={file._id}>
             {file.name}</div>)
         })
-        // JSON.stringify(file)
+        // JSON.stringify(organization)
       }
       <Button onClick={()=>{
-        createFile({name:"hello world"})
+        if(orgId)
+        createFile({name:"hello world",orgId})
       }}>CLick</Button>
      
     </main>
