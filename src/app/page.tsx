@@ -9,16 +9,16 @@ export default function Home() {
   // const session = useSession();
   const organization = useOrganization();
   const user = useUser();
-
+  // console.log(user.user)
   let orgId: string| undefined = undefined;
   if(organization.isLoaded && user.isLoaded){
     orgId = organization.organization?.id ?? user.user?.id
   }
+  console.log(user)
   
   const createFile = useMutation(api.files.createFile)
   const file = useQuery(api.files.getFiles,orgId ?{orgId:orgId}:'skip')
 
-  console.log(file)
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <SignedIn>
@@ -41,7 +41,7 @@ export default function Home() {
       <Button onClick={()=>{
         if(orgId)
         createFile({name:"hello world",orgId})
-      }}>CLick</Button>
+      }}>Click</Button>
      
     </main>
   );
