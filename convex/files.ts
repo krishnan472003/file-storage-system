@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values"
 import {MutationCtx, QueryCtx, mutation, query} from "./_generated/server"
 import { getUser } from "./users";
 
-
+// authorisation check function
 async function hasAccessToOrg(
     ctx:QueryCtx|MutationCtx,
     tokenIdentifier:string,
@@ -16,12 +16,21 @@ async function hasAccessToOrg(
     return hasAccess;
     
 }
+
+// mutations
+
+export const generateUploadUrl = mutation(async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  });
+
 export const createFile = mutation({
     args: {
         name : v.string(),
+        fileId: v.id("_storage"),
         orgId : v.string(),
     },
     async handler(ctx,args){
+        console.log(args.fileId)
         const identity = await ctx.auth.getUserIdentity();
         if(!identity){
             throw new ConvexError("not signed in");
@@ -30,6 +39,7 @@ export const createFile = mutation({
             if(!hasAccess) throw new ConvexError("You dont have authorization")
         await ctx.db.insert("files",{
             name:args.name,
+            fileId:args.fileId,
             orgId:args.orgId,
         })
     },
