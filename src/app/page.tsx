@@ -1,87 +1,20 @@
 'use client';
 import { SignOutButton, SignedIn, SignedOut, useOrganization, useUser } from "@clerk/nextjs";
-import { SignIn, SignInButton, useSession } from "@clerk/nextjs";
+import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button"
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Input } from "@/components/ui/input"
-
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import UploadButton from "./uploadButton";
+import { FileCard } from "./fileCard";
+import Image from "next/image";
 import { Loader2 } from "lucide-react";
 
-const formSchema = z.object({
-  title: z.string().min(2).max(50),
-  file: z.custom<FileList>((val) => val instanceof FileList, "Required")
-    .refine((files) => files.length > 0, "Required"),
-})
+
 
 
 export default function Home() {
-  // const session = useSession();
-  const { toast } = useToast();
-  const [isFileDialogOpen, setIsFilesDialogOpen] = useState(false);
-  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    // defaultValues: {
-    //   title: "",
-    //   file: undefined
-    // },
-  })
-  const fieldRef = form.register("file")
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!orgId) return
 
-    console.log(values)
-    console.log(values.file)
-    try{
-
-      const postUrl = await generateUploadUrl();
-      const result = await fetch(postUrl, {
-        method: "POST",
-        headers: { "Content-Type": values.file[0].type },
-        body: values.file[0],
-      });
-  
-      const { storageId } = await result.json();
-      await createFile({
-        name: values.title,
-        fileId: storageId,
-        orgId,
-      })
-  
-      form.reset()
-      setIsFilesDialogOpen(false)
-      toast({
-        variant: "default",
-        title: "File uploaded",
-        description: "your file is uploaded"
-      })
-    }
-    catch(e){
-
-      toast({
-        variant:"destructive",
-        title:"File upload failed.",
-        description:"please try again"
-      })
-    }
-
-  }
 
   const organization = useOrganization();
   const user = useUser();
@@ -89,83 +22,64 @@ export default function Home() {
   if (organization.isLoaded && user.isLoaded) {
     orgId = organization.organization?.id ?? user.user?.id
   }
-
-  const createFile = useMutation(api.files.createFile)
   const file = useQuery(api.files.getFiles, orgId ? { orgId: orgId } : 'skip')
-
+  const isLoading = file === undefined;
   return (
     <main className="container mx-auto pt-12">
-      <div className="flex justify-between items bg-center">
-        <h1 className="text-4xl font-bold"> Your files</h1>
-        <Dialog open={isFileDialogOpen} onOpenChange={setIsFilesDialogOpen}>
-          <DialogTrigger>Open</DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Upload your file</DialogTitle>
-              <DialogDescription>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>title</FormLabel>
-                          <FormControl>
-                            <Input  {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="file"
-                      render={() => (
-                        <FormItem>
-                          <FormLabel>File</FormLabel>
-                          <FormControl>
-                            <Input type="file" {...fieldRef}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit"
-                disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting &&(<Loader2 className=" h-4 w-4 animate-spin"/>
-                  )}
-                
-                  Submit</Button>
-                  </form>
-                </Form>
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
-      </div>
 
 
-      {/* <SignedIn>
+
+      {/* 
+      <SignedIn>
         <SignOutButton>
-        <Button>Sign out</Button>
+          <Button>Sign out</Button>
         </SignOutButton>
       </SignedIn>
       <SignedOut>
         <SignInButton>
-        <Button>Sign In</Button>
+          <Button>Sign In</Button>
         </SignInButton>
       </SignedOut> */}
+
+      {isLoading && (
+        <div className="flex flex-col gap-4 w-full items-center mt-24">
+          <Loader2 className="h-32 w-32 animate-spin text-grey-700" />
+          <div className="text-2xl">Loading your images...</div>
+        </div>
+      )}
+      {!isLoading && file.length === 0 && (
+        <>
+          <div className="flex flex-col gap-4 w-full items-center mt-24">
+            <Image alt="empty dir" width={200} height={200} src="/empty.svg" />
+            <div className="text-2xl">
+              You don't have any file uploaded
+            </div>
+            <UploadButton />
+          </div>
+        </>
+      )}
+
+
       {
-        file?.map((file) => {
-          return (<div key={file._id}>
-            {file.name}</div>)
-        })
-        // JSON.stringify(organization)
+        !isLoading && file.length > 0 && (
+          <>
+            <div className="flex justify-between items bg-center mb-10">
+              <h1 className="text-4xl font-bold"> Your files</h1>
+              <UploadButton />
+            </div>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+            {file?.map((file) => {
+              return (
+                <>
+                    <FileCard key={file._id} file={file} />
+                </>
+              )
+              })
+              }
+            </div>
+          </>
+        )
       }
-
-
     </main>
   );
 }
