@@ -6,7 +6,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Doc, Id } from "../../convex/_generated/dataModel"
+
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -27,15 +27,17 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { DeleteIcon, FileTextIcon, GanttChartIcon, ImageIcon, MoreVertical, TextIcon, Trash2 } from "lucide-react"
+import { DeleteIcon, FileTextIcon, GanttChartIcon, ImageIcon, MoreVertical, Star, TextIcon, Trash2 } from "lucide-react"
 import { ReactNode, useState } from "react"
 import { useMutation, useQueries, useQuery } from "convex/react"
-import { api } from "../../convex/_generated/api"
 import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
+import { api } from "../../../../convex/_generated/api"
+import { Doc } from "../../../../convex/_generated/dataModel"
 const FileCardActions = ({ file }: { file: Doc<"files"> }) => {
     const { toast } = useToast()
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const toggleFavourite= useMutation(api.files.toggleFavourite);
     const deleteFile = useMutation(api.files.deleteFiles)
     return (
 
@@ -66,9 +68,18 @@ const FileCardActions = ({ file }: { file: Doc<"files"> }) => {
             <DropdownMenu>
                 <DropdownMenuTrigger><MoreVertical /></DropdownMenuTrigger>
                 <DropdownMenuContent>
+                    
+                <DropdownMenuItem onClick={() => {
+                        toggleFavourite({fileId:file._id})
+                    }} className="flex gap-2 items-center cursor-pointer"><Star className="w-4 h-4" />Favourite</DropdownMenuItem>
+
+                <DropdownMenuSeparator/>
+
                     <DropdownMenuItem onClick={() => {
                         setIsConfirmOpen(true);
                     }} className="flex gap-2 text-red-600 items-center cursor-pointer"><Trash2 className="w-4 h-4" />Delete</DropdownMenuItem>
+                    
+                    
                 </DropdownMenuContent>
             </DropdownMenu>
         </>
@@ -76,7 +87,7 @@ const FileCardActions = ({ file }: { file: Doc<"files"> }) => {
 }
 
 export const FileCard = ({ file }: { file: Doc<"files"> }) => {
-    const getFile = useQuery(api.files.imageURL,{fileId:file.fileId})
+    const getFile = useQuery(api.files.imageURL,{fileId:file.fileId}) as string
     const typeIcons = {
         image: <ImageIcon />,
         pdf: <FileTextIcon />,
@@ -125,10 +136,10 @@ export const FileCard = ({ file }: { file: Doc<"files"> }) => {
 }
 
 const FileImage = ({ file }: { file: Doc<"files"> }) => {
-    const getURL = useQuery(api.files.imageURL, { fileId: file.fileId })
+    const getURL = useQuery(api.files.imageURL, { fileId: file.fileId }) as string
     return (
         <>
-            <Image alt={file.name} width={300} height={100} src={getURL} />
+            <Image alt={file.name} width={300} height={100} src = {getURL} />
 
         </>
     )

@@ -53,6 +53,8 @@ export const createFile = mutation({
 export const getFiles = query({
     args: {
         orgId: v.string(),
+        query:v.optional(v.string()),
+        favourite : v.optional(v.boolean()),
     },
     async handler(ctx, args) {
         const identity = await ctx.auth.getUserIdentity();
@@ -61,7 +63,32 @@ export const getFiles = query({
         }
         const hasAccess = await hasAccessToOrg(ctx, identity.tokenIdentifier, args.orgId)
         if (!hasAccess) return [];
-        else return await ctx.db.query("files").withIndex("by_orgId", (q) => q.eq("orgId", args.orgId)).collect();
+        let files =  await ctx.db.query("files").withIndex("by_orgId", (q) => q.eq("orgId", args.orgId)).collect();
+        const query = args.query as string
+        if(query){
+            files =  files.filter((file)=> file.name.toLowerCase().includes(query.toLowerCase()))
+        }
+        
+        if(args.favourite){
+            const user = await ctx.db
+            .query("users")
+            .withIndex("by_tokenIdentifer",(q)=>
+                q.eq("tokenIdentifier",identity.tokenIdentifier))
+            .first();
+            if(!user) return files
+            const favourites = await ctx.db
+            .query("favourites")
+            .withIndex("by_userId_orgId_fileId",(q)=> 
+                q.eq("userId",user._id).eq("orgId",args.orgId))
+            .collect();
+
+            files = files.filter((file) => 
+                favourites.some((favourite) => favourite.fileId === file._id )
+        )
+        // return files;
+        }
+
+        return files;
         // console.log
     }
 })
@@ -96,3 +123,56 @@ export const imageURL =query({
       return await ctx.storage.getUrl(args.fileId)
     },
   });
+
+export const toggleFavourite = mutation({
+    args: {
+        fileId: v.id("files"),
+    },
+    async handler(ctx, args) {
+            const access =await  hasAccessToFile(ctx,args.fileId)
+            if(!access) return new ConvexError("No access to file")
+            const favourite = await ctx.db
+            .query("favourites")
+            .withIndex("by_userId_orgId_fileId",(q)=>
+                q.eq("userId",access.user._id)
+                .eq("orgId", access.file.orgId as string)
+                .eq("fileId",access.file._id))
+                .first();
+
+        if(!favourite){
+            await ctx.db.insert("favourites",{
+                fileId: access.file._id,
+                userId:access.user._id,
+                orgId:access.file?.orgId as string,
+            })
+        }
+        else{
+            await ctx.db.delete(favourite._id)
+        }
+
+         
+
+
+    },
+})
+
+async function hasAccessToFile(ctx:QueryCtx|MutationCtx,fileId: Id<"files">){
+    const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            return null
+        }
+        
+        const file = await ctx.db.get(fileId);
+        
+        if(!file) return null
+
+        const hasAccess = await hasAccessToOrg(ctx, identity.tokenIdentifier, file.orgId?file.orgId:"" )
+        if (!hasAccess) return null 
+        const user = await ctx.db
+        .query("users")
+        .withIndex("by_tokenIdentifer",(q)=> q.eq("tokenIdentifier",identity.tokenIdentifier)).first();
+        
+        if(!user) return null
+
+        return {file,user}
+}
