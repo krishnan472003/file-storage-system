@@ -12,7 +12,14 @@ import { DataTable, } from "./dataTable";
 import { columns } from "./columns";
 import { Doc } from "../../../../convex/_generated/dataModel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@radix-ui/react-label";
 
 function Placeholder() {
   return (
@@ -38,7 +45,8 @@ export const FilesBrowser = ({ title, favouriteOnly, isDeleted }: { title: strin
   let orgId: string | undefined = undefined;
   if (organization.isLoaded && user.isLoaded) {
     orgId = organization.organization?.id ?? user.user?.id
-  }
+    }
+  const [type,setType]  = useState<Doc<"files">["type"] | "all">("all")
   const favouriteCards = useQuery(api.files.getAllFavourites, orgId ? { orgId } : "skip");
   console.log(favouriteCards)
   const files = useQuery(api.files.getFiles,
@@ -48,6 +56,7 @@ export const FilesBrowser = ({ title, favouriteOnly, isDeleted }: { title: strin
         query,
         favourite: favouriteOnly,
         deletedOnly: isDeleted,
+        type: type !=='all'?type:undefined,
       } : 'skip')
 
 
@@ -81,11 +90,35 @@ export const FilesBrowser = ({ title, favouriteOnly, isDeleted }: { title: strin
               <UploadButton />
             </div>
             <Tabs defaultValue="grid">
-              <TabsList className="mb-4">
-                <TabsTrigger value="grid" className="flex gap-2 items-center"><GridIcon />Grid</TabsTrigger>
-                <TabsTrigger value="table" className="flex gap-2 items-center"><Table2 />Table</TabsTrigger>
-              </TabsList>
-              
+              <div className="flex justify-between">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="grid" className="flex gap-2 items-center"><GridIcon />Grid</TabsTrigger>
+                  <TabsTrigger value="table" className="flex gap-2 items-center"><Table2 />Table</TabsTrigger>
+                </TabsList>
+
+                <div className="flex gap-2 items-center">
+                  <Label>
+                    Type filter
+                  </Label>
+                  <Select value={type} onValueChange= 
+                {
+                    (newType) =>{
+                    setType(newType as any);
+                  }}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="pdf">Pdf</SelectItem>
+                      <SelectItem value="csv">Csv</SelectItem>
+                      <SelectItem value="image">Image</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                </div>
+              </div>
               <TabsContent value="grid">
                 <>
 

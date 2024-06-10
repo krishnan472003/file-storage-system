@@ -24,6 +24,7 @@ import Image from "next/image"
 import { api } from "../../../../convex/_generated/api"
 import { Doc, Id } from "../../../../convex/_generated/dataModel"
 import { Protect } from "@clerk/clerk-react"
+import { roles } from "../../../../convex/schema"
 
 
 export const FileCardActions = ({ file,isFavourated }:
@@ -37,7 +38,7 @@ export const FileCardActions = ({ file,isFavourated }:
     const deleteFile = useMutation(api.files.deleteFiles)
     const restoreFile = useMutation(api.files.restoreFiles)
     const getFile = useQuery(api.files.imageURL, { fileId: file.fileId }) as string
-
+        const me = useQuery(api.users.getMe)
 
     return (
 
@@ -93,7 +94,15 @@ export const FileCardActions = ({ file,isFavourated }:
                         <Download className="w-4 h-4"/> Download
                     </DropdownMenuItem>
 
-                    <Protect role="org:admin" fallback={<></>} >
+                    <Protect 
+                    condition={(check)=>{
+                        return check({
+                            role: "org:admin"
+                        }) || file.userId === me?._id
+                        
+                    }}
+                    fallback={<></>} >
+
                         <DropdownMenuSeparator />
                         {!file.shouldDelete ? (
                             <DropdownMenuItem onClick={() => {

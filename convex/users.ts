@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { MutationCtx, QueryCtx, internalMutation, query } from "./_generated/server";
 import { roles } from "./schema";
+import { Doc } from "./_generated/dataModel";
 
 
 export async function getUser(
@@ -97,5 +98,21 @@ export const getUserProfile = query({
             image: user?.image,
 
         }
+    },
+})
+
+
+
+export const getMe = query({
+    args:{},
+    async handler(ctx, args) {
+    const identity = await ctx.auth.getUserIdentity();
+        
+    if(!identity) return null;
+
+        const user = getUser(ctx,identity.tokenIdentifier)
+        if(!user) return null
+        else return user
+        
     },
 })
