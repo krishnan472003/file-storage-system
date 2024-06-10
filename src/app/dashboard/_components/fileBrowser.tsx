@@ -1,5 +1,5 @@
 "use client"
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -24,7 +24,7 @@ function Placeholder() {
 }
 
 
-export const  FilesBrowser= ({title,favourite}:{title:string,favourite?:boolean})=> {
+export const FilesBrowser = ({ title, favouriteOnly,isDeleted }: { title: string, favouriteOnly?: boolean , isDeleted?: boolean }) => {
 
   const [query, setQuery] = useState("")
   const organization = useOrganization();
@@ -33,7 +33,18 @@ export const  FilesBrowser= ({title,favourite}:{title:string,favourite?:boolean}
   if (organization.isLoaded && user.isLoaded) {
     orgId = organization.organization?.id ?? user.user?.id
   }
-  const file = useQuery(api.files.getFiles, orgId ? { orgId: orgId, query,favourite } : 'skip')
+  const favouriteCards = useQuery(api.files.getAllFavourites, orgId?{orgId}:"skip");
+  console.log(favouriteCards)
+
+  const file = useQuery(api.files.getFiles,
+    orgId ?
+      {
+        orgId: orgId,
+        query,
+        favourite: favouriteOnly,
+        deletedOnly: isDeleted,
+      } : 'skip')
+
   const isLoading = file === undefined;
   return (
     <>
@@ -60,7 +71,7 @@ export const  FilesBrowser= ({title,favourite}:{title:string,favourite?:boolean}
               {file?.map((file) => {
                 return (
                   <>
-                    <FileCard key={file._id} file={file} />
+                    <FileCard key={file._id} favourites={favouriteCards ?? []} file={file} />
                   </>
                 )
               })

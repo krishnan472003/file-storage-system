@@ -25,16 +25,35 @@ http.route({
       switch (result.type) {
         case "user.created":
           await ctx.runMutation(internal.users.createUser, {
-            tokenIdentifier: `https://quiet-hagfish-44.clerk.accounts.dev|${result.data.id}`,
+            tokenIdentifier: `https://${process.env.CLERK_HOST_NAME}|${result.data.id}`,
+            name: `${result.data.first_name ?? ' '} ${result.data.last_name ?? ' '}`,
+            image: result.data.image_url,
           });
           break;
-          case "organizationMembership.created":
-          await ctx.runMutation(internal.users.addOrgIdToUser,{
-            tokenIdentifier:  `https://quiet-hagfish-44.clerk.accounts.dev|${result.data.public_user_data.user_id}`,
-            orgId: result.data.organization.id
+          case "user.updated":
+            await ctx.runMutation(internal.users.updateUser, {
+              tokenIdentifier: `https://${process.env.CLERK_HOST_NAME}|${result.data.id}`,
+              name: `${result.data.first_name ?? ' '} ${result.data.last_name ?? ' '}`,
+              image: result.data.image_url,
+            });
+            break;
+        case "organizationMembership.created":
+          await ctx.runMutation(internal.users.addOrgIdToUser, {
+            tokenIdentifier: `https://${process.env.CLERK_HOST_NAME}|${result.data.public_user_data.user_id}`,
+            orgId: result.data.organization.id,
+            role: result.data.role.includes("admin") ? "admin" : "member"
           })
-          break;
-      
+          // console.log(result.data.role)
+          break
+
+        case "organizationMembership.updated":
+          await ctx.runMutation(internal.users.updatedRoleInOrg, {
+            tokenIdentifier: `https://${process.env.CLERK_HOST_NAME}|${result.data.public_user_data.user_id}`,
+            orgId: result.data.organization.id,
+            role: result.data.role.includes("admin") ? "admin" : "member"
+          })
+          console.log(result.data.role)
+          break
       }
 
       return new Response(null, {

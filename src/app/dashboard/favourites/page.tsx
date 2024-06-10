@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 export default function Favourites(){
     return(
         <div>
-        <FilesBrowser title="Your Favourites" favourite ={true}/>
+        <FilesBrowser title="Your Favourites" favouriteOnly ={true}/>
         </div>
     )
 }
