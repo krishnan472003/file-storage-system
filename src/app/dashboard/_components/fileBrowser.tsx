@@ -1,13 +1,18 @@
 "use client"
 import { useMutation, useQuery } from "convex/react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Grid3X3, GridIcon, Loader2, Table2 } from "lucide-react";
 import { useState } from "react";
 import UploadButton from "./uploadButton";
 import { SearchBar } from "./searchBar";
 import { FileCard } from "./fileCard";
 import { useOrganization, useUser } from "@clerk/clerk-react";
 import { api } from "../../../../convex/_generated/api";
+import { DataTable, } from "./dataTable";
+import { columns } from "./columns";
+import { Doc } from "../../../../convex/_generated/dataModel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 
 function Placeholder() {
   return (
@@ -24,19 +29,19 @@ function Placeholder() {
 }
 
 
-export const FilesBrowser = ({ title, favouriteOnly,isDeleted }: { title: string, favouriteOnly?: boolean , isDeleted?: boolean }) => {
+export const FilesBrowser = ({ title, favouriteOnly, isDeleted }: { title: string, favouriteOnly?: boolean, isDeleted?: boolean }) => {
 
   const [query, setQuery] = useState("")
   const organization = useOrganization();
+
   const user = useUser();
   let orgId: string | undefined = undefined;
   if (organization.isLoaded && user.isLoaded) {
     orgId = organization.organization?.id ?? user.user?.id
   }
-  const favouriteCards = useQuery(api.files.getAllFavourites, orgId?{orgId}:"skip");
+  const favouriteCards = useQuery(api.files.getAllFavourites, orgId ? { orgId } : "skip");
   console.log(favouriteCards)
-
-  const file = useQuery(api.files.getFiles,
+  const files = useQuery(api.files.getFiles,
     orgId ?
       {
         orgId: orgId,
@@ -45,7 +50,15 @@ export const FilesBrowser = ({ title, favouriteOnly,isDeleted }: { title: string
         deletedOnly: isDeleted,
       } : 'skip')
 
-  const isLoading = file === undefined;
+
+  const modifiedFiles = files?.map((file) => ({
+    ...file,
+    isFavourated: (favouriteCards ?? []).some(
+      (favourite) => favourite.fileId === file._id
+    )
+  })) ?? []
+
+  const isLoading = files === undefined;
   return (
     <>
 
@@ -55,29 +68,51 @@ export const FilesBrowser = ({ title, favouriteOnly,isDeleted }: { title: string
           <div className="text-2xl">Loading your images...</div>
         </div>
       )}
-
-      {!isLoading && !query && file.length === 0 && <Placeholder />}
+      {!isLoading && !query && files.length === 0 && <Placeholder />}
 
 
       {
-        !isLoading && file.length > 0 && (
+
+        !isLoading && files.length > 0 && (
           <>
             <div className="flex justify-between items bg-center mb-10">
               <h1 className="text-4xl font-bold"> {title}</h1>
               <SearchBar query={query} setQuery={setQuery} />
               <UploadButton />
             </div>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              {file?.map((file) => {
-                return (
-                  <>
-                    <FileCard key={file._id} favourites={favouriteCards ?? []} file={file} />
-                  </>
-                )
-              })
-              }
-            </div>
+            <Tabs defaultValue="grid">
+              <TabsList className="mb-4">
+                <TabsTrigger value="grid" className="flex gap-2 items-center"><GridIcon />Grid</TabsTrigger>
+                <TabsTrigger value="table" className="flex gap-2 items-center"><Table2 />Table</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="grid">
+                <>
+
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    {modifiedFiles.map((file) => {
+                      return (
+                        <>
+                          <FileCard key={file._id} file={file} />
+                        </>
+                      )
+                    })
+                    }
+                  </div>
+                </>
+              </TabsContent>
+
+              <TabsContent value="table">
+
+                <DataTable columns={columns} data={modifiedFiles ?? []} />
+
+              </TabsContent>
+            </Tabs>
+
+
+
           </>
+
         )
       }
 
